@@ -2,21 +2,21 @@
 
 # To run: `node server.js`
 
-#Dependencies (so far):
+# Dependencies (so far):
 ```
 node, npm
 express, express-graphql, graphql
 lodash
 ```
 
-#To build:
+# To build:
 
-##(1) Init the project
+## (1) Init the project
 ```
 npm init -y
 npm install --save express express-graphql graphql lodash
 ```
-##(2) Init an Express server
+## (2) Init an Express server
 `server.js`:
 ```
 const express = require('express');
@@ -28,7 +28,7 @@ app.listen(4000, () => {
 });
 ```
 
-##(3) Hook up GraphQL to Express
+## (3) Hook up GraphQL to Express
 `server.js`:
 ```
 // glue or compatibility layer btwn GraphQL & express
@@ -42,7 +42,7 @@ Test via `node server.js`
 - Should get immediate `Listening` response
 - `localhost:4000/graphql` should throw `{"errors":[{"message":"GraphQL middleware options must contain a schema."}]}`
 
-##(4) Init a **schema**
+## (4) Init a **schema**
 Inform GraphQL how data is arranged, and how it can be accessed. What type of data? How do relations play out between different pieces of data?
 - What properties does each object have?
 - What are relations between objects?
