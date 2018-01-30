@@ -27,6 +27,21 @@ app.listen(4000, () => {
   console.log('Listening');
 });
 ```
+#### `nodemon` to make sure server is always running the latest code ('hot reloading'(?)):
+`npm install --save nodemon`
+`package.json`:
+```
+"scripts": {
+  "dev": "nodemon server.js"
+},
+```
+##### Then, `npm run dev` to run
+Now every change you save will trigger
+```
+[nodemon] restarting due to changes...
+[nodemon] starting `node server.js`
+Listening
+```
 
 ## (3) Hook up GraphQL to Express
 `server.js`:
