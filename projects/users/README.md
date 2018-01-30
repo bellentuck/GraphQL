@@ -55,7 +55,8 @@ const graphql = require('graphql');
 const {
   GraphQLObjectType,
   GraphQLString,
-  GraphQLInt
+  GraphQLInt,
+  GraphQLSchema
 } = graphql;
 
 const UserType = new GraphQLObjectType({
@@ -67,3 +68,38 @@ const UserType = new GraphQLObjectType({
   }
 });
 ```
+
+
+## (5) Establish a **root query**
+A root query is an entry point into our data. A root query allows GraphQL to "jump into" a graph of data.
+`schema.js`:
+```
+// "If you're looking for a user, and you give me an ID, I will give you back a user."
+const rootQuery = new GraphQLObjectType({
+  name: 'RootQueryType',
+  fields: {
+    user: {
+      type: UserType,
+      args: { id: { type: GraphQLString } },
+      resolve(parentValue, args) {   // resolve() is what actually gets the data
+        // 'args' is whatever arguments were called with the root query.
+        return users.find(u => u.id === args.id);
+      }
+    }
+  }
+});
+
+module.exports = new GraphQLSchema({
+  query: rootQuery
+});
+```
+`server.js`:
+```
+const schema = require('./schema/schema');
+
+app.use('/graphql', expressGraphQL({
+  schema,  // auto-expanded to `schema: schema`
+  graphiql: true
+}));
+```
+Restart server, test - `node server.js` - and the app will load up inside the GraphiQL GUI app!
