@@ -72,7 +72,8 @@ const {
   GraphQLObjectType,
   GraphQLString,
   GraphQLInt,
-  GraphQLSchema
+  GraphQLSchema,
+  GraphQLList
 } = graphql;
 
 const UserType = new GraphQLObjectType({
@@ -250,3 +251,126 @@ const UserType = new GraphQLObjectType({
 });
 ```
 (With `fetch`, as before, you'd just tack on the object to specify `GET` and the `.json()` method instead of `.data`.)
+##### "`resolve` takes us from one place on the graph to another place on the graph" -
+#### I.e., each edge on the graph is a `resolve` function.
+
+## (9) Implement multiple `RootQuery` entry points
+Add a sibling field to `user` the `RootQuery` in `schema.js`:
+```
+company: {
+  type: CompanyType,
+  args: { id: { type: GraphQLString } },
+  resolve(parentValue, args) {
+    return axios.get(`http://localhost:3000/companies/${args.id}`)
+      .then(res => res.data);
+  }
+}
+```
+Now, GraphiQL, given
+```
+{
+  company(id: "1") {
+    name
+    description
+  }
+}
+```
+can return
+```
+{
+  "data": {
+    "company": {
+      "name": "Twister",
+      "description": "the hot spot"
+    }
+  }
+}
+```
+
+## (10) Relate data bidirectionally
+E.g., relating users to a company.
+How to do this RESTfully, via `json-server`:
+`http://localhost:3000/companies/1/users`. However, with GraphQL:
+- we add a `users` field to the `CompanyType` in `schema.js`
+- we wrap the `fields` object in `CompanyType` in an arrow function, to avoid circular reference errors. Also wrap the `fields` object in `UserType` in an arrow function. This way, the function gets defined but not executed until after the entire JS file has been executed (which will define company and user types). Then, `UserType` and `CompanyType` will be inside the *closure scopes* of their anonymous functions, and so everything will be correctly defined (b/c of how closures work in JS--inner stuff has access to all relative-outer stuff).
+```
+const CompanyType = new GraphQLObjectType({
+  name: 'Company',
+  fields: () => ({
+    id: { type: GraphQLString },
+    name: { type: GraphQLString },
+    description: { type: GraphQLString },
+    users: {
+      type: new GraphQLList(UserType),
+      resolve(parentValue, args) {
+        return axios.get(`http://localhost:3000/companies/${parentValue.id}/users`)
+          .then(res => res.data);
+      }
+    }
+  })
+});
+```
+Now, in GraphiQL, e.g.,
+```
+{
+  company(id: "1") {
+    name
+    users {
+      id
+      firstName
+      company {
+        name
+        users {
+          id
+        }
+      }
+      age
+    }
+  }
+}
+```
+can return
+```
+{
+  "data": {
+    "company": {
+      "name": "Twister",
+      "users": [
+        {
+          "id": "20",
+          "firstName": "Manders",
+          "company": {
+            "name": "Twister",
+            "users": [
+              {
+                "id": "20"
+              },
+              {
+                "id": "40"
+              }
+            ]
+          },
+          "age": 20
+        },
+        {
+          "id": "40",
+          "firstName": "Anders",
+          "company": {
+            "name": "Twister",
+            "users": [
+              {
+                "id": "20"
+              },
+              {
+                "id": "40"
+              }
+            ]
+          },
+          "age": 40
+        }
+      ]
+    }
+  }
+}
+```
+You can recursively nest as far down in this structure as you so choose!
