@@ -143,3 +143,42 @@ Note that:
 }
 ```
 4. No arg provided, get error (no "Name" provided error)
+
+## (7) Build and serve data in the GraphQL application
+#### (7a) Make a separate server to act as an outside API via `json-server`:
+```
+npm install --save json-server
+```
+`db.json`: data you want your server to serve up
+```
+{
+  "users": [
+    { "id": "20", "firstName": "Manders", "age": 20 },
+    { "id": "40", "firstName": "Anders", "age": 40 }
+  ]
+}
+```
+`package.json`: start server up (separately from the GraphQL server)
+```
+"scripts": {
+  "json:server": "json-server --watch db.json"
+},
+```
+`npm run json:server` to test
+###### `json-server` is great for running some fake data in a development environment!
+
+#### (7b) Implement an async data request for the `resolve` function
+Via `axios`:
+`npm install --save axios`
+`schema.js`:
+```
+return axios.get(`http://localhost:3000/users/${args.id}`)
+  .then(response => response.data);
+```
+Via `fetch`:
+`npm install --save isomorphic-fetch`
+`schema.js`:
+```
+return fetch(`http://localhost:3000/users/${args.id}`, { method: 'GET' })
+  .then(response => response.json());
+```

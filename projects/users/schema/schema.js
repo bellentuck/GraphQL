@@ -1,5 +1,7 @@
 const graphql = require('graphql');
-//const _ = require('lodash');
+const axios = require('axios');
+//const fetch = require('isomorphic-fetch');
+
 
 const {
   GraphQLObjectType,
@@ -7,11 +9,6 @@ const {
   GraphQLInt,
   GraphQLSchema  // I: root query; O: GraphQL schema instance
 } = graphql;
-
-const users = [
-  { id: '23', firstName: 'Bill', age: 30 },
-  { id: '24', firstName: 'Samantha', age: 31 }
-];
 
 const UserType = new GraphQLObjectType({
   name: 'User',
@@ -29,10 +26,20 @@ const rootQuery = new GraphQLObjectType({
     user: {
       type: UserType,
       args: { id: { type: GraphQLString } },
-      resolve(parentValue, args) {   // resolve() is what actually gets the data
-        // 'args' is whatever arguments were called with the root query.
-        return users.find(u => u.id === args.id);
-        //return _.find(users, { id: args.id });
+      resolve(parentValue, args) {
+        // - resolve() is what actually gets the data. Fetch any piece of data we'd possibly want.
+        // - 'args' is whatever arguments were called with the root query.
+        // - `resolve` will nearly always return a promise, as data fetching in a Node app will be asynchronous.
+
+        // via `axios`:
+        return axios.get(`http://localhost:3000/users/${args.id}`)
+          .then(response => response.data);
+
+        // via `fetch`:
+        // return fetch(`http://localhost:3000/users/${args.id}`, { method: 'GET' })
+        //   .then(response => response.json());
+
+        // Just have to return raw JSON or js object, and GraphQL takes care of it from there.
       }
     }
   }
