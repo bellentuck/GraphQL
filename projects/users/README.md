@@ -6,7 +6,8 @@
 ```
 node, npm
 express, express-graphql, graphql
-lodash
+axios OR isomorphic-fetch
+nodemon
 ```
 
 # To build:
@@ -197,3 +198,55 @@ Via `fetch`:
 return fetch(`http://localhost:3000/users/${args.id}`, { method: 'GET' })
   .then(response => response.json());
 ```
+
+## (8) Relate some data
+E.g., a company to a user
+`db.json`:
+```
+{
+  "users": [
+    { "id": "20", "firstName": "Manders", "age": 20, "companyId": "1" },
+    { "id": "40", "firstName": "Anders", "age": 40, "companyId": "1" },
+    { "id": "60", "firstName": "Flanders", "age": 42, "companyId": "2" }
+  ],
+  "companies": [
+    { "id": "1", "name": "Twister", "description": "the hot spot" },
+    { "id": "2", "name": "Sorry", "description": "not sorry" }
+  ]
+}
+```
+Now, `http://localhost:3000/companies/1/users` will bring up all users at company 1, `.../2/users` for all at company 2. This RESTful convention is being set up by `json-server`, b/c of the `"companyId"` field supplied for each user.
+
+Create company type in `schema.js` (define **above** `UserType`):
+```
+const CompanyType = new GraphQLObjectType({
+  name: 'Company',
+  fields: {
+    id: { type: GraphQLString },
+    name: { type: GraphQLString },
+    description: { type: GraphQLString }
+  }
+});
+```
+Now, treat the association between `CompanyType` and `UserType` as if it were another field.
+- Accordingly, create a new `company` field, of type `CompanyType`, on the `UserType` object.
+- Add a `resolve` function, which is required as the `companyId` field on the user *model* (the actual data) is different from the `company` field  on the user *type* (defined in the schema).
+```
+const UserType = new GraphQLObjectType({
+  name: 'User',
+  fields: {
+    id: { type: GraphQLString },
+    firstName: { type: GraphQLString },
+    age: { type: GraphQLInt },
+    company: {
+      type: CompanyType,
+      resolve(parentValue, args) {
+        //console.log(parentValue, args); --> good for testing at first
+        return axios.get(`http://localhost:3000/companies/${parentValue.companyId}`)
+          .then(res => res.data);
+      }
+    }
+  }
+});
+```
+(With `fetch`, as before, you'd just tack on the object to specify `GET` and the `.json()` method instead of `.data`.)
