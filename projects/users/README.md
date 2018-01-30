@@ -84,6 +84,8 @@ const rootQuery = new GraphQLObjectType({
       resolve(parentValue, args) {   // resolve() is what actually gets the data
         // 'args' is whatever arguments were called with the root query.
         return users.find(u => u.id === args.id);
+        // Just have to return raw JSON or js object,
+        // and GraphQL takes care of it from there.
       }
     }
   }
@@ -103,3 +105,41 @@ app.use('/graphql', expressGraphQL({
 }));
 ```
 Restart server, test - `node server.js` - and the app will load up inside the GraphiQL GUI app!
+
+
+## (6) Test query in GraphiQL
+Query:
+```
+{
+  user(id: "23") {
+    id,
+    firstName,
+    age
+  }
+}
+```
+Result:
+```
+{
+  "data": {
+    "user": {
+      "id": "23",
+      "firstName": "Bill",
+      "age": 30
+    }
+  }
+}
+```
+(Types show up as they've been marked in the schema.)
+Note that:
+1. `id` can be any id, and corresponding user info is fetched
+2. You completely specify what fields you want return. (E.g., just `firstName` or just `age`.) This prevents over-fetching (a problem with RESTful routing).
+3. If no record found, `null` user is returned:
+```
+{
+  "data": {
+    "user": null
+  }
+}
+```
+4. No arg provided, get error (no "Name" provided error)
