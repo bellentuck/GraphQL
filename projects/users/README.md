@@ -73,7 +73,8 @@ const {
   GraphQLString,
   GraphQLInt,
   GraphQLSchema,
-  GraphQLList
+  GraphQLList,
+  GraphQLNonNull
 } = graphql;
 
 const UserType = new GraphQLObjectType({
@@ -160,6 +161,65 @@ Note that:
 }
 ```
 4. No arg provided, get error (no "Name" provided error)
+5. You can also **name your queries**, enabling reuse! E.g.,
+```
+query findUser{
+  user(id: "23") {
+    id,
+    firstName,
+    age
+  }
+}
+```
+6. Similarly, you can **name query results**, enabling multiple instances of the same query *type* within a single query:
+```
+{
+  bill: user(id: "23") {
+    id,
+    firstName,
+    age
+  }
+  lil: user(id: "24") {
+    id,
+    firstName,
+    age
+  }
+}
+```
+Another example (using `CompanyType` from later on):
+```
+{
+  twister: company(id: "1"){
+    description
+    users {
+      age
+    }
+  }
+  sorry: company(id: "2"){
+    description
+    users {
+      age
+    }
+  }
+}
+```
+7. Optimize with **Query Fragments**:
+First, write the fragment like so:
+```
+fragment companyDetails on Company {
+  id
+  name
+  description
+}
+```
+Then, call the fragment like so:
+```
+{
+  twister: company(id: "1") {
+    ...companyDetails
+  }
+}
+```
 
 ## (7) Build and serve data in the GraphQL application
 #### (7a) Make a separate server to act as an outside API via `json-server`:
@@ -374,3 +434,119 @@ can return
 }
 ```
 You can recursively nest as far down in this structure as you so choose!
+
+# Writing Data
+
+## (11) Modify the data store using `mutations`
+`schema.js`:
+```
+const mutation = new GraphQLObjectType({
+  name: 'Mutation',  // CrUD
+  fields: {  // describe operations
+    addUser: {
+      type: UserType,
+      args: {
+        firstName: { type: new GraphQLNonNull(GraphQLString) },
+        age: { type: new GraphQLNonNull(GraphQLInt) },
+        companyId: { type: GraphQLString }
+      },
+      resolve(parentValue, { firstName, age }) {
+        return axios.post('http://localhost:3000/users', { firstName, age })
+          .then(res => res.data);
+      }
+    },
+    deleteUser: {
+      type: UserType,
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLString) }
+      },
+      resolve(parentValue, { id }) {
+        return axios.delete(`http://localhost:3000/users/${id}`)
+          .then(res => res.data);
+      }
+    },
+    editUser: {
+      type: UserType,
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLString) },
+        firstName: { type: GraphQLString },
+        age: { type: GraphQLInt },
+        companyId: { type: GraphQLString }
+      },
+      resolve(parentValue, args) {
+        return axios.patch(`http://localhost:3000/users/${args.id}`, args)
+          .then(res => res.data);
+      }
+    }
+  }
+});
+
+module.exports = new GraphQLSchema({
+  query: RootQuery,
+  mutation
+});
+```
+Then, an `addUser` query
+```
+mutation {
+  addUser(firstName: "Sanders", age: 26) {
+    id
+    firstName
+    age
+  }
+}
+```
+yields the following result:
+```
+{
+  "data": {
+    "addUser": {
+      "id": "O3W58aB",
+      "firstName": "Sanders",
+      "age": 26
+    }
+  }
+}
+```
+(`json-server` creates the id automatically.)
+
+`deleteUser`:
+```
+mutation {
+  deleteUser(id: "60") {
+    id
+  }
+}
+```
+yields:
+```
+{
+  "data": {
+    "deleteUser": {
+      "id": null
+    }
+  }
+}
+```
+`editUser`:
+```
+mutation {
+  editUser(id: "40", firstName: "Shmanders", age: 146) {
+    id
+    firstName
+    age
+  }
+}
+```
+yields:
+```
+{
+  "data": {
+    "editUser": {
+      "id": "40",
+      "firstName": "Shmanders",
+      "age": 146
+    }
+  }
+}
+```
